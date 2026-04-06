@@ -21,6 +21,7 @@
 #define KEY_0 14
 #define KEY_DOT 13
 #define KEY_BACK 15
+#define KEY_STOP 16
 
 #define KEY_MODE1 4
 #define KEY_MODE2 8
@@ -81,5 +82,8 @@ void Display();
 void DisplayInit();
 float Zpos2mm();
 void handleModeKey(uint8_t targetMode);
+void drawHomingLine();
+void drawMode3Page();
+bool StopAction();
 
 #endif

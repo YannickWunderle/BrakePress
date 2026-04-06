@@ -28,7 +28,7 @@ HomingItem homingItems[] = {
   // Y axis
   { 16, 3, "-", 7 },  // Y-
   { 18, 3, "Y", 8 },  // Y home
-  { 19, 3, "+", 9 }  // Y+
+  { 19, 3, "+", 9 }   // Y+
 };
 uint8_t homingItemCount = sizeof(homingItems) / sizeof(HomingItem);
 
@@ -213,6 +213,15 @@ void drawMode2Page() {
   lcd.setCursor(0, 0);
   lcd.print("Cut length: ");
   printFloatField(mode2Fields[0]);
+}
+
+bool StopAction() {
+  uint8_t k = keypad.read();
+  if (k == KEY_STOP) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 void drawMode3Page() {
@@ -489,12 +498,43 @@ void ReadKeyboard() {
       if (editing) updateFieldFromBuffer();
       else lastSetting();
       break;
-
+    case KEY_DOT:
+      handleDot();
+      break;
+    case KEY_0:
+      handleDigit(0);
+      break;
+    case KEY_1:
+      handleDigit(1);
+      break;
+    case KEY_2:
+      handleDigit(2);
+      break;
+    case KEY_3:
+      handleDigit(3);
+      break;
+    case KEY_4:
+      handleDigit(4);
+      break;
+    case KEY_5:
+      handleDigit(5);
+      break;
+    case KEY_6:
+      handleDigit(6);
+      break;
+    case KEY_7:
+      handleDigit(7);
+      break;
+    case KEY_8:
+      handleDigit(8);
+      break;
+    case KEY_9:
+      handleDigit(9);
+      break;
     default:
       break;
   }
 }
-
 
 void handleModeKey(uint8_t targetMode) {
   // Mode 3 is handled separately
@@ -531,15 +571,14 @@ void DisplayInit() {
   lastBlink = millis();
 }
 
-void CalcGlobalMode(){
-    if (selectedSetting < 3) {
-        GlobalMode = 10 + selectedSetting;  // 10, 11, 12
-    } 
-    else {
-        GlobalMode = HomingMode;            // 1–9
-    }
-    if (Mode == 1) GlobalMode = 13;
-    if (Mode == 2) GlobalMode = 14;
+void CalcGlobalMode() {
+  if (selectedSetting < 3) {
+    GlobalMode = 10 + selectedSetting;  // 10, 11, 12
+  } else {
+    GlobalMode = HomingMode;  // 1–9
+  }
+  if (Mode == 1) GlobalMode = 13;
+  if (Mode == 2) GlobalMode = 14;
 }
 
 void Display() {

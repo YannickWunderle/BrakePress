@@ -128,79 +128,100 @@ void setup() {
   digitalWrite(Precharge_Pin, HIGH);
 
   DisplayInit();
-
-  if (debug) {
-    digitalWrite(FuEnble_Pin, LOW);
-    //while (1) {
-    //  Precharge();
-    //}
-  } else {
-    digitalWrite(FuEnble_Pin, HIGH);
-    HomeZ();
-    delay(500);
-    GoPos(CutHightUp, 1);
-    delay(1000);
-    digitalWrite(FuEnble_Pin, LOW);
-  }
 }
 
 void loop() {
   Precharge();
   Display();
-  printInputStates();
-
-
-  //bend();
-  //SerialPos();
-  //Cut();
-  //delay(2);
-  //drive2();
-  /* GoPos(0);
-  delay(1000);
-  GoPos(1);
-  delay(1000);
-  GoPos(2);
-  delay(1000);
-  GoPos(0.95);
-  delay(100);
-  GoPos(1);
-  delay(1000);
-  GoPos(-0.05);
-  delay(100);
-  */
+  if (digitalRead(SwitchFoot_Pin)) {
+    switch (GlobalMode) {
+      case 0:
+        break;
+      case 1:
+        JogZ(-1);
+        break;
+      case 2:
+        HomeZ();
+        break;
+      case 3:
+        JogZ(1);
+        break;
+      case 4:
+        JogX(-1);
+        break;
+      case 5:
+        HomeX();
+        break;
+      case 6:
+        JogX(1);
+        break;
+      case 7:
+        JogY(-1);
+        break;
+      case 8:
+        HomeY();
+        break;
+      case 9:
+        JogY(1);
+        break;
+      case 10:
+        GoPosZ(Z_Goalpos, 0);
+        drawMode3Page();
+        break;
+      case 11:
+        GoPosX(X_Goalpos, 0);
+        break;
+      case 12:
+        GoPosY(Y_Goalpos, 0);
+        break;
+      case 13:
+        bend();
+        break;
+      case 14:
+        Cut();
+        break;
+      default:
+        break;
+    }
+  }
 }
 
-void printInputStates() {
-  Serial.println(GlobalMode);
-}
 
 void HomeZ() {
   digitalWrite(DirH_Pin, LOW);
   digitalWrite(DirL_Pin, HIGH);
   while (digitalRead(SwitchZ_Pin)) {
     Precharge();
-    if (precharged) {
-      digitalWrite(FuEnble_Pin, HIGH);
-    } else {
-      digitalWrite(FuEnble_Pin, LOW);
-    }
     if (digitalRead(SwitchFoot_Pin) && precharged) {
       digitalWrite(StepL_Pin, LOW);
       digitalWrite(StepH_Pin, HIGH);
       delayMicroseconds(50);  // short pulse width only
       digitalWrite(StepL_Pin, HIGH);
       digitalWrite(StepH_Pin, LOW);
-      delayMicroseconds(200);  // short pulse width only
+      delayMicroseconds(350);  // short pulse width only
     }
   }
   GlobalPos = 0;
-  Serial.println("Homing done");
+  Z_homed = true;
+  drawMode3Page();
+  GoPosZ(CutHightUp, 1);
+  drawMode3Page();
+  delay(3000);
+}
+
+void HomeX() {
+  X_homed = true;
+  drawMode3Page();
+}
+
+void HomeY() {
+  Y_homed = true;
+  drawMode3Page();
 }
 
 
-
-float BendPosition(float MatrixHeight, float MatrixWidth, float MatrixRadius, float Thickness, float angle, float correctionAngle) {
-  float alphaDeg = angle + correctionAngle;
+float BendPosition() {
+  float alphaDeg = BendAngle + CorrectionAngle;
   float alphaRad = alphaDeg * M_PI / 180.0f;
   const float k = 1.0f / tanf(M_PI / 8.0f);
   float p_ideal = (MatrixWidth / 2.0f) * k * tanf(alphaRad / 4.0f);
@@ -208,78 +229,31 @@ float BendPosition(float MatrixHeight, float MatrixWidth, float MatrixRadius, fl
   float penetration = p_ideal + p_radius;
   Serial.print("Penetration: ");
   Serial.println(penetration);
-  float bend = (float)UpperToolHeight - MatrixHeight - Thickness + penetration;
+  float bend = (float)UpperToolHeight - MatrixHeight - MaterialThickness + penetration;
   return bend;
 }
 
 
-void SerialPos() {
-  digitalWrite(Light_Pin, LOW);
-  static String input = "";
-  while (Serial.available() > 0) {
-    char c = Serial.read();
-    if (c == '\n' || c == '\r') {
-      if (input.length() > 0) {
-        float pos = input.toFloat();  // Convert to float
-        Serial.print("Set pos: ");
-        Serial.println(pos);
-        GoPos(pos, 1);  // Move to position
-
-        // After reaching the position, print GlobalPos
-        Serial.print("Reached Steps: ");
-        Serial.println(GlobalPos);
-        float Posmm = (GlobalPos * 5) / float(2929);
-        Serial.print("Reached: ");
-        Serial.print(Posmm);
-        Serial.println(" mm");
-      }
-      input = "";  // Clear buffer
-    } else {
-      input += c;  // Accumulate characters
-    }
-  }
-}
-
 void bend() {
-  digitalWrite(FuEnble_Pin, HIGH);
-  float FreeSpace = 30;
-  float MatrixHeight = 75;
-  float MatrixWidth = 12;
-  float MatrixRadius = 0;
-  float Thickness = 1;
-  float angle = 90;
-  float correctionAngle = 0;
   digitalWrite(Light_Pin, LOW);
-  float MaterialTouch = (float)UpperToolHeight - float(MatrixHeight) - float(Thickness);
-  Serial.print("Material touch at: ");
-  Serial.println(MaterialTouch);
+  float MaterialTouch = (float)UpperToolHeight - float(MatrixHeight) - float(MaterialThickness);
 
-  GoPos(MaterialTouch, 1);
+  GoPosZ(MaterialTouch, 1);
   delay(1000);
-  float BendDepth = BendPosition(MatrixHeight, MatrixWidth, MatrixRadius, Thickness, angle, correctionAngle);
-  Serial.print("Bend depth: ");
-  Serial.println(BendDepth);
-  GoPos(BendDepth, 1);
+  float BendDepth = BendPosition();
+  GoPosZ(BendDepth, 1);
   delay(500);
   float UpperPos = MaterialTouch - FreeSpace;
-  Serial.print("Upper Position: ");
-  Serial.println(UpperPos);
-  GoPos(UpperPos, 1);
-  delay(100);
-  digitalWrite(FuEnble_Pin, LOW);
-
+  GoPosZ(UpperPos, 1);
   delay(3000);
 }
 
 void Cut() {
   digitalWrite(Light_Pin, HIGH);
-  Serial.println("Cut");
   downholderDown();
-  digitalWrite(FuEnble_Pin, HIGH);
-  GoPos(CutHightDown, 0);
+  GoPosZ(CutHightDown, 1);
   delay(1000);
-  GoPos(CutHightUp, 0);
-  digitalWrite(FuEnble_Pin, LOW);
+  GoPosZ(CutHightUp, 1);
   downholderUp();
   delay(6000);
 }
@@ -297,7 +271,6 @@ unsigned long calcSteps(float mm) {
 
 void downholderDown() {
   //2A = 150 analogRead
-  Serial.println("Downholder down");
   bool moovingR = true;
   bool moovingL = true;
   bool startL = true;
@@ -342,14 +315,13 @@ void downholderDown() {
 }
 
 void downholderUp() {
-  Serial.println("Downholder down");
   digitalWrite(DownholderUp_Pin, HIGH);
   digitalWrite(DownholderR_Pin, HIGH);
   digitalWrite(DownholderL_Pin, HIGH);
 }
 
-void drive2() {
-  if (digitalRead(SwitchZ_Pin)) {
+void JogZ(int direction) {
+  if (direction == 1) {
     digitalWrite(DirH_Pin, HIGH);
     digitalWrite(DirL_Pin, LOW);
   } else {
@@ -357,17 +329,28 @@ void drive2() {
     digitalWrite(DirL_Pin, HIGH);
   }
 
-  if (digitalRead(SwitchFoot_Pin)) {
+  while (digitalRead(SwitchFoot_Pin) && precharged) {
+    Precharge();
     digitalWrite(StepL_Pin, LOW);
     digitalWrite(StepH_Pin, HIGH);
     delayMicroseconds(50);  // short pulse width only
     digitalWrite(StepL_Pin, HIGH);
     digitalWrite(StepH_Pin, LOW);
-    delayMicroseconds(500);  // short pulse width only
+    delayMicroseconds(550);  // short pulse width only
+    if (direction==1) GlobalPos++;
+    else GlobalPos--;
   }
+  drawMode3Page();
 }
 
-void GoPos(float GoalPos, bool homingMode) {
+void JogX(int direction) {
+  drawMode3Page();
+}
+void JogY(int direction) {
+  drawMode3Page();
+}
+
+void GoPosZ(float GoalPos, bool homingMode) {
   unsigned long GoalPosSteps = calcSteps(GoalPos);
   bool direction = (GoalPosSteps > GlobalPos);
 
@@ -386,8 +369,8 @@ void GoPos(float GoalPos, bool homingMode) {
   unsigned long now = 0;
   unsigned long lastStepTime = micros();
 
-  uint16_t stepTime = 500;  // start at 1000 µs
-  const uint16_t minStepTime = 150;
+  uint16_t stepTime = 600;  
+  const uint16_t minStepTime = 550;
   uint8_t rampCount = 0;
 
   while ((abs(GoalPosSteps - GlobalPos) > 0) && (digitalRead(SwitchZ_Pin) || homingMode)) {
@@ -397,7 +380,7 @@ void GoPos(float GoalPos, bool homingMode) {
       if (!lastPedal) {
         delay(5);
         lastPedal = true;
-        stepTime = 1000;
+        stepTime = 600;
         rampCount = 0;
       }
 
@@ -422,24 +405,34 @@ void GoPos(float GoalPos, bool homingMode) {
 
     } else {
       lastPedal = false;  // pedal released → next press restarts ramp
+      if(StopAction()){
+        return;
+      }
     }
   }
 
   float Posmm = (GlobalPos * 5) / float(2929);
-  Serial.print("Reached: ");
-  Serial.print(Posmm);
-  Serial.println(" mm");
 }
+
+void GoPosX(float GoalPos, bool homingMode) {
+  return;
+}
+void GoPosY(float GoalPos, bool homingMode) {
+  return;
+}
+
 
 void Precharge() {
   if (digitalRead(Estop_Pin)) {
     if (millis() - PrechargeTimer > PrechargeTime) {
       digitalWrite(Precharge_Pin, LOW);
       precharged = true;
+      digitalWrite(FuEnble_Pin, HIGH);
     }
   } else {
     digitalWrite(Precharge_Pin, HIGH);
     precharged = false;
+    digitalWrite(FuEnble_Pin, LOW);
     PrechargeTimer = millis();
   }
 }
