@@ -133,6 +133,7 @@ void setup() {
 void loop() {
   Precharge();
   Display();
+  Enstopdebug();
   if (digitalRead(SwitchFoot_Pin)) {
     switch (GlobalMode) {
       case 0:
@@ -186,6 +187,80 @@ void loop() {
   }
 }
 
+void Enstopdebug() {
+  Serial.print("Endstop Switch X: ");
+  Serial.println(digitalRead(EndstopSwitchX_Pin));
+  Serial.print("Endstop Tacho X: ");
+  Serial.println(digitalRead(EndstopTachX_Pin));
+  Serial.print("Endstop Switch Z: ");
+  Serial.println(digitalRead(EndstopSwitchZ_Pin));
+  Serial.print("Endstop Tacho Z: ");
+  Serial.println(digitalRead(EndstopTachZ_Pin));
+
+
+  if (!digitalRead(EndstopSwitchX_Pin)) {
+    int i = 0;
+    bool Laststate = digitalRead(EndstopTachX_Pin);
+    digitalWrite(EndstopH_Pin, LOW);
+    digitalWrite(EndstopL_Pin, HIGH);
+    analogWrite(EndstopEnX_Pin, 100);
+
+    while (i < 500) {
+      if (digitalRead(EndstopTachX_Pin) != Laststate) {
+        Laststate = !Laststate;
+        i++;
+      }
+    }
+    digitalWrite(EndstopEnX_Pin, LOW);
+    delay(500);
+    digitalWrite(EndstopL_Pin, LOW);
+    digitalWrite(EndstopH_Pin, HIGH);
+    analogWrite(EndstopEnX_Pin, 100);
+
+    while (i > 0) {
+      if (digitalRead(EndstopTachX_Pin) != Laststate) {
+        Laststate = !Laststate;
+        i--;
+      }
+    }
+    digitalWrite(EndstopEnX_Pin, LOW);
+    delay(500);
+  } else {
+    digitalWrite(EndstopEnX_Pin, LOW);
+  }
+
+ if (!digitalRead(EndstopSwitchZ_Pin)) {
+    int j = 0;
+    bool LaststateZ = digitalRead(EndstopTachZ_Pin);
+    digitalWrite(EndstopH_Pin, LOW);
+    digitalWrite(EndstopL_Pin, HIGH);
+    analogWrite(EndstopEnZ_Pin, 255);
+
+    while (j < 300) {
+      if (digitalRead(EndstopTachZ_Pin) != LaststateZ) {
+        LaststateZ = !LaststateZ;
+        j++;
+      }
+    }
+    digitalWrite(EndstopEnZ_Pin, LOW);
+    delay(500);
+    digitalWrite(EndstopL_Pin, LOW);
+    digitalWrite(EndstopH_Pin, HIGH);
+    analogWrite(EndstopEnZ_Pin, 100);
+
+    while (j > 0) {
+      if (digitalRead(EndstopTachZ_Pin) != LaststateZ) {
+        LaststateZ = !LaststateZ;
+        j--;
+      }
+    }
+    digitalWrite(EndstopEnZ_Pin, LOW);
+    delay(500);
+  } else {
+    digitalWrite(EndstopEnZ_Pin, LOW);
+  }
+}
+
 
 void HomeZ() {
   digitalWrite(DirH_Pin, LOW);
@@ -235,7 +310,6 @@ float BendPosition() {
 
 
 void bend() {
-  digitalWrite(Light_Pin, LOW);
   float MaterialTouch = (float)UpperToolHeight - float(MatrixHeight) - float(MaterialThickness);
 
   GoPosZ(MaterialTouch, 1);
@@ -249,7 +323,6 @@ void bend() {
 }
 
 void Cut() {
-  digitalWrite(Light_Pin, HIGH);
   downholderDown();
   GoPosZ(CutHightDown, 1);
   delay(1000);
@@ -337,7 +410,7 @@ void JogZ(int direction) {
     digitalWrite(StepL_Pin, HIGH);
     digitalWrite(StepH_Pin, LOW);
     delayMicroseconds(550);  // short pulse width only
-    if (direction==1) GlobalPos++;
+    if (direction == 1) GlobalPos++;
     else GlobalPos--;
   }
   drawMode3Page();
@@ -369,7 +442,7 @@ void GoPosZ(float GoalPos, bool homingMode) {
   unsigned long now = 0;
   unsigned long lastStepTime = micros();
 
-  uint16_t stepTime = 600;  
+  uint16_t stepTime = 600;
   const uint16_t minStepTime = 550;
   uint8_t rampCount = 0;
 
@@ -405,7 +478,7 @@ void GoPosZ(float GoalPos, bool homingMode) {
 
     } else {
       lastPedal = false;  // pedal released → next press restarts ramp
-      if(StopAction()){
+      if (StopAction()) {
         return;
       }
     }

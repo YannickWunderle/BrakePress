@@ -7,6 +7,7 @@
 //#include "field.h"
 
 #define MaxHight 150
+#define Light_Pin 47
 
 #define KEY_1 1
 #define KEY_2 2

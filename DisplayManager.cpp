@@ -264,9 +264,16 @@ void drawMode3Page() {
 
 void drawCurrentPage() {
   lcd.clear();
-  if (Mode == 1) drawMode1Page();
-  else if (Mode == 2) drawMode2Page();
-  else if (Mode == 3) drawMode3Page();
+  if (Mode == 1) {
+    digitalWrite(Light_Pin, LOW);
+    drawMode1Page();
+  } else if (Mode == 2) {
+    digitalWrite(Light_Pin, HIGH);
+    drawMode2Page();
+  } else if (Mode == 3) {
+    digitalWrite(Light_Pin, LOW);
+    drawMode3Page();
+  }
 }
 
 // ----------------- blink handling -----------------
