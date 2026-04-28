@@ -50,7 +50,10 @@ const uint8_t mode1Count = sizeof(mode1Fields) / sizeof(Field);
 // Mode 2 fields
 Field mode2Fields[] = {
   // "Cut length: " at (0,0) -> colon at col 10, value at col 12
-  { 10, 0, 12, 0, 5, 1, 0.0, 700.0, &CutLength }
+  { 10, 0, 12, 0, 5, 1, 0.0, 700.0, &CutLength },
+  { 4, 1, 6, 1, 3, 0, 0.0, 100, &Zvel },
+  { 4, 2, 6, 2, 5, 1, 0.0, 100, &Xvel },
+  { 4, 3, 6, 3, 5, 1, 0.0, 100, &Yvel }
 };
 const uint8_t mode2Count = sizeof(mode2Fields) / sizeof(Field);
 
@@ -78,6 +81,16 @@ uint8_t currentFieldCount() {
 
 float Zpos2mm() {
   float Posmm = (GlobalPos * 5) / float(2929);
+  return Posmm;
+}
+
+float Xpos2mm() {
+  float Posmm = GlobalPosX / float(8);
+  return Posmm;
+}
+
+float Ypos2mm() {
+  float Posmm = GlobalPosY / float(8);
   return Posmm;
 }
 
@@ -213,6 +226,18 @@ void drawMode2Page() {
   lcd.setCursor(0, 0);
   lcd.print("Cut length: ");
   printFloatField(mode2Fields[0]);
+
+  lcd.setCursor(0, 1);
+  lcd.print("Zvel: ");
+  printFloatField(mode2Fields[1]);
+
+  lcd.setCursor(0, 2);
+  lcd.print("Xvel: ");
+  printFloatField(mode2Fields[2]);
+
+  lcd.setCursor(0, 3);
+  lcd.print("Yvel: ");
+  printFloatField(mode2Fields[3]);
 }
 
 bool StopAction() {
@@ -236,7 +261,7 @@ void drawMode3Page() {
 
   lcd.setCursor(0, 1);
   lcd.print("X P:");
-  float Xmm = Zpos2mm();
+  float Xmm = Xpos2mm();
   lcd.print(String(Xmm).substring(0, 6));
 
   lcd.setCursor(11, 1);
@@ -245,7 +270,7 @@ void drawMode3Page() {
 
   lcd.setCursor(0, 2);
   lcd.print("Y P:");
-  float Ymm = Zpos2mm();
+  float Ymm = Ypos2mm();
   lcd.print(String(Ymm).substring(0, 6));
 
   lcd.setCursor(11, 2);

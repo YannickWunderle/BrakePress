@@ -56,8 +56,13 @@ extern uint8_t lastMode;
 extern uint8_t HomingMode;
 extern uint8_t GlobalMode;
 
+extern float Zvel;
+extern float Xvel;
+extern float Yvel;
 
-extern unsigned long GlobalPos;
+extern long GlobalPos;
+extern long GlobalPosX;
+extern long GlobalPosY;
 
 struct Field {
   uint8_t colonCol;
