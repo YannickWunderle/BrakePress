@@ -64,9 +64,13 @@ Mod Z2 and X axis
 #define Yvelmax 255
 
 #define XoffsetBending 12
-#define YoffsetBending 45
+#define YoffsetBending 42
 #define XoffsetCutting 12
 #define YoffsetCutting 45
+#define MaxX 545
+#define MaxY 60
+#define MaxStepTime 1200
+#define MinStepTime 150
 
 bool debug = true;
 
@@ -92,7 +96,7 @@ float CutLength = 120;
 
 float Z_Goalpos = 60;
 float X_Goalpos = 100;
-float Y_Goalpos = 150;
+float Y_Goalpos = 31;
 
 bool Z_homed = false;
 bool X_homed = false;
@@ -103,9 +107,9 @@ uint8_t lastMode = 0;
 uint8_t HomingMode = 0;
 uint8_t GlobalMode = 0;
 
-float Zvel = 30;
-float Xvel = 30;
-float Yvel = 30;
+float Zvel = 60;
+float Xvel = 50;
+float Yvel = 50;
 
 
 void setup() {
@@ -222,6 +226,10 @@ void HomeZ() {
       digitalWrite(StepL_Pin, HIGH);
       digitalWrite(StepH_Pin, LOW);
       delayMicroseconds(350);  // short pulse width only
+    } else {
+      if (StopAction()) {
+        return;
+      }
     }
   }
   GlobalPos = 0;
@@ -241,8 +249,12 @@ void HomeX() {
       analogWrite(EndstopEnX_Pin, 180);
     } else {
       digitalWrite(EndstopEnX_Pin, LOW);
+      if (StopAction()) {
+        return;
+      }
     }
   }
+  digitalWrite(EndstopEnX_Pin, LOW);
   GlobalPosX = 0;
   SpindownX(0);
   X_homed = true;
@@ -254,8 +266,6 @@ void HomeX() {
 
 void SpindownX(int direction) {
   unsigned long spindown = millis();
-  digitalWrite(EndstopH_Pin, LOW);
-  digitalWrite(EndstopL_Pin, LOW);
   bool LaststateX = digitalRead(EndstopTachX_Pin);
   while ((millis() - spindown) < 500) {
     if (digitalRead(EndstopTachX_Pin) != LaststateX) {
@@ -271,8 +281,6 @@ void SpindownX(int direction) {
 
 void SpindownY(int direction) {
   unsigned long spindown = millis();
-  digitalWrite(EndstopH_Pin, LOW);
-  digitalWrite(EndstopL_Pin, LOW);
   bool LaststateY = digitalRead(EndstopTachY_Pin);
   while ((millis() - spindown) < 500) {
     if (digitalRead(EndstopTachY_Pin) != LaststateY) {
@@ -287,6 +295,7 @@ void SpindownY(int direction) {
 }
 
 void GoPosX(float positionMM) {
+  positionMM = constrain(positionMM, 0, MaxX);
   long GoalPos = calcXsteps(positionMM);
   if (GoalPos == GlobalPosX) {
     return;
@@ -321,6 +330,9 @@ void GoPosX(float positionMM) {
     } else {
       digitalWrite(EndstopEnX_Pin, LOW);
       SpindownX(direction);
+      if (StopAction()) {
+        return;
+      }
     }
   }
   digitalWrite(EndstopEnX_Pin, LOW);
@@ -338,16 +350,20 @@ void HomeY() {
   while (digitalRead(EndstopSwitchY_Pin)) {
     if (digitalRead(SwitchFoot_Pin)) {
       //digitalWrite(EndstopEnX_Pin, HIGH);
-      analogWrite(EndstopEnY_Pin, 255);
+      analogWrite(EndstopEnY_Pin, 170);
     } else {
       digitalWrite(EndstopEnY_Pin, LOW);
+      if (StopAction()) {
+        return;
+      }
     }
   }
+  digitalWrite(EndstopEnY_Pin, LOW);
   GlobalPosY = 0;
   SpindownY(0);
   Y_homed = true;
   drawMode3Page();
-  GoPosY(10);
+  GoPosY(31);
   drawMode3Page();
   delay(2000);
 }
@@ -373,8 +389,8 @@ void bend() {
     GoPosX(BendLength + XoffsetBending);
     GoPosY(MatrixHeight - YoffsetBending);
   } else {
+    GoPosX(BendLength + XoffsetBending - 60);
     GoPosY(MatrixHeight - YoffsetBending - 5);
-    GoPosX(BendLength + XoffsetBending-60);
   }
 
   float MaterialTouch = (float)UpperToolHeight - float(MatrixHeight) - float(MaterialThickness);
@@ -449,6 +465,9 @@ void downholderDown() {
       digitalWrite(DownholderL_Pin, HIGH);
       startL = true;
       startR = true;
+      if (StopAction()) {
+        return;
+      }
     }
     delay(5);
   }
@@ -468,6 +487,7 @@ void JogZ(int direction) {
     digitalWrite(DirH_Pin, LOW);
     digitalWrite(DirL_Pin, HIGH);
   }
+  int stepTime = map(Zvel, 0, 100, MaxStepTime, MinStepTime);
 
   while (digitalRead(SwitchFoot_Pin) && precharged) {
     Precharge();
@@ -476,7 +496,7 @@ void JogZ(int direction) {
     delayMicroseconds(50);  // short pulse width only
     digitalWrite(StepL_Pin, HIGH);
     digitalWrite(StepH_Pin, LOW);
-    delayMicroseconds(550);  // short pulse width only
+    delayMicroseconds(stepTime);  // short pulse width only
     if (direction == 1) GlobalPos++;
     else GlobalPos--;
   }
@@ -537,6 +557,7 @@ void JogY(int direction) {
 }
 
 void GoPosZ(float GoalPos, bool homingMode) {
+  GoalPos = constrain(GoalPos, 2, MaxHight);
   unsigned long GoalPosSteps = calcSteps(GoalPos);
   bool direction = (GoalPosSteps > GlobalPos);
 
@@ -566,7 +587,7 @@ void GoPosZ(float GoalPos, bool homingMode) {
       if (!lastPedal) {
         delay(5);
         lastPedal = true;
-        stepTime = 600;
+        stepTime = map(Zvel, 0, 100, MaxStepTime, MinStepTime);
         rampCount = 0;
       }
 
@@ -583,7 +604,7 @@ void GoPosZ(float GoalPos, bool homingMode) {
         else GlobalPos--;
 
         rampCount++;
-        if (rampCount == 2) {  // every 16 steps
+        if (rampCount == 2) {
           rampCount = 0;
           if (stepTime > minStepTime) stepTime--;  // reduce step period
         }
@@ -601,6 +622,7 @@ void GoPosZ(float GoalPos, bool homingMode) {
 }
 
 void GoPosY(float positionMM) {
+  positionMM = constrain(positionMM, 0, MaxY);
   long GoalPos = calcXsteps(positionMM);
   if (GoalPos == GlobalPosY) {
     return;
@@ -634,11 +656,14 @@ void GoPosY(float positionMM) {
       }
     } else {
       digitalWrite(EndstopEnY_Pin, LOW);
-      SpindownX(direction);
+      SpindownY(direction);
+      if (StopAction()) {
+        return;
+      }
     }
   }
   digitalWrite(EndstopEnY_Pin, LOW);
-  SpindownX(direction);
+  SpindownY(direction);
 }
 
 

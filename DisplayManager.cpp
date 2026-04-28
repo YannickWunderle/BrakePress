@@ -61,8 +61,8 @@ const uint8_t mode2Count = sizeof(mode2Fields) / sizeof(Field);
 Field mode3Fields[] = {
   // "G:" at (11,0) -> colon at 12, value at 13
   { 12, 0, 13, 0, 6, 2, 2, MaxHight, &Z_Goalpos },
-  { 12, 1, 13, 1, 6, 2, 2, MaxHight, &X_Goalpos },
-  { 12, 2, 13, 2, 6, 2, 2, MaxHight, &Y_Goalpos }
+  { 12, 1, 13, 1, 6, 2, 12, MaxX, &X_Goalpos },
+  { 12, 2, 13, 2, 6, 2, 0, MaxY, &Y_Goalpos }
 };
 const uint8_t mode3Count = sizeof(mode3Fields) / sizeof(Field);
 
@@ -241,8 +241,12 @@ void drawMode2Page() {
 }
 
 bool StopAction() {
-  uint8_t k = keypad.read();
-  if (k == KEY_STOP) {
+  //Serial.println("Stopping ?");
+  //uint8_t k = keypad.read();
+  //Serial.println(analogRead(Keyboard_Pin));
+  //if (k == KEY_STOP) {
+  if (analogRead(Keyboard_Pin) > 250) {
+    Serial.println("Stopped");
     return 1;
   } else {
     return 0;

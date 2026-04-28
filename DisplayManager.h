@@ -6,8 +6,11 @@
 #include "SoftPathElectronics.h"
 //#include "field.h"
 
+#define MaxX 550
+#define MaxY 50
 #define MaxHight 150
 #define Light_Pin 47
+#define Keyboard_Pin A8  //unused. Has to be hardcoded in lib
 
 #define KEY_1 1
 #define KEY_2 2
