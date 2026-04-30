@@ -50,7 +50,7 @@ const uint8_t mode1Count = sizeof(mode1Fields) / sizeof(Field);
 // Mode 2 fields
 Field mode2Fields[] = {
   // "Cut length: " at (0,0) -> colon at col 10, value at col 12
-  { 10, 0, 12, 0, 5, 1, 0.0, 700.0, &CutLength },
+  { 10, 0, 12, 0, 5, 1, MinCutLength, 545.0, &CutLength },
   { 4, 1, 6, 1, 3, 0, 0.0, 100, &Zvel },
   { 4, 2, 6, 2, 5, 1, 0.0, 100, &Xvel },
   { 4, 3, 6, 3, 5, 1, 0.0, 100, &Yvel }

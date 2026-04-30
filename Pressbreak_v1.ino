@@ -29,7 +29,7 @@ Mod Z2 and X axis
 #define ShuntR_Pin A14
 #define ShuntL_Pin A15
 
-#define Keyboard_Pin A8  //unused. Has to be hardcoded in lib
+#define Keyboard_Pin A8  //Also has to be hardcoded in lib
 #define Estop_Pin A9
 #define SwitchFoot_Pin 5
 #define Precharge_Pin 45
@@ -40,8 +40,9 @@ Mod Z2 and X axis
 #define StepH_Pin A6
 #define StepL_Pin A7
 
-#define EndstopL_Pin 13
-#define EndstopH_Pin 10
+#define EndstopVcc_Pin 43
+#define EndstopL_Pin 7   //13 original 13, remap on mega with wire because of defect pins
+#define EndstopH_Pin 10  // 10 original 10, remap on mega with wire because of defect pins
 #define EndstopEnX_Pin 12
 #define EndstopEnY_Pin 11
 #define EndstopTachY_Pin 2
@@ -50,11 +51,12 @@ Mod Z2 and X axis
 #define EndstopSwitchX_Pin 9
 
 #define PrechargeTime 2000
-#define MaxHight 150
+#define MaxHight 145
 #define UpperToolHeight 165.7
 
 #define CutHightUp 60
 #define CutHightDown 2
+#define MinCutLength 35
 
 #define Zvelmin 3000
 #define Zvelmax 200
@@ -63,12 +65,12 @@ Mod Z2 and X axis
 #define Yvelmin 220
 #define Yvelmax 255
 
-#define XoffsetBending 12
-#define YoffsetBending 42
-#define XoffsetCutting 12
-#define YoffsetCutting 45
+#define XoffsetBending 17
+#define YoffsetBending 33
+#define XoffsetCutting 17
+#define YoffsetCutting 3
 #define MaxX 545
-#define MaxY 60
+#define MaxY 70
 #define MaxStepTime 1200
 #define MinStepTime 150
 
@@ -76,8 +78,8 @@ bool debug = true;
 
 unsigned long PrechargeTimer = 0;
 long GlobalPos = 0;
-long GlobalPosX = 0;
-long GlobalPosY = 0;
+long GlobalPosX = 800;
+long GlobalPosY = 336;
 
 bool precharged = false;
 
@@ -96,7 +98,7 @@ float CutLength = 120;
 
 float Z_Goalpos = 60;
 float X_Goalpos = 100;
-float Y_Goalpos = 31;
+float Y_Goalpos = 42;
 
 bool Z_homed = false;
 bool X_homed = false;
@@ -129,6 +131,7 @@ void setup() {
   pinMode(EndstopH_Pin, OUTPUT);
   pinMode(EndstopEnX_Pin, OUTPUT);
   pinMode(EndstopEnY_Pin, OUTPUT);
+  pinMode(EndstopVcc_Pin, OUTPUT);
 
   pinMode(ShuntR_Pin, INPUT);
   pinMode(ShuntL_Pin, INPUT);
@@ -150,6 +153,7 @@ void setup() {
   digitalWrite(DownholderR_Pin, HIGH);
   digitalWrite(DownholderL_Pin, HIGH);
   digitalWrite(Precharge_Pin, HIGH);
+  digitalWrite(EndstopVcc_Pin, LOW);
 
   DisplayInit();
 }
@@ -241,6 +245,8 @@ void HomeZ() {
 }
 
 void HomeX() {
+  digitalWrite(EndstopVcc_Pin, HIGH);
+  delay(300);
   digitalWrite(EndstopH_Pin, HIGH);
   digitalWrite(EndstopL_Pin, LOW);
   while (digitalRead(EndstopSwitchX_Pin)) {
@@ -262,6 +268,7 @@ void HomeX() {
   GoPosX(100);
   drawMode3Page();
   delay(2000);
+  digitalWrite(EndstopVcc_Pin, LOW);
 }
 
 void SpindownX(int direction) {
@@ -295,48 +302,65 @@ void SpindownY(int direction) {
 }
 
 void GoPosX(float positionMM) {
+  delay(300);
   positionMM = constrain(positionMM, 0, MaxX);
   long GoalPos = calcXsteps(positionMM);
   if (GoalPos == GlobalPosX) {
     return;
   }
-  int direction = 0;
-  if (GoalPos > GlobalPosX) {
-    direction = 1;
-  } else {
-    direction = 0;
-  }
-  if (direction == 1) {
-    digitalWrite(EndstopH_Pin, LOW);
-    digitalWrite(EndstopL_Pin, HIGH);
-  } else {
-    digitalWrite(EndstopH_Pin, HIGH);
-    digitalWrite(EndstopL_Pin, LOW);
-  }
-  int velocity = map(Xvel, 0, 100, Xvelmin, Xvelmax);
-  bool LaststateX = digitalRead(EndstopTachX_Pin);
-  while (abs(GoalPos - GlobalPosX)) {
-    if (digitalRead(SwitchFoot_Pin)) {
-      analogWrite(EndstopEnX_Pin, velocity);
-      //Serial.println(GlobalPosX);
-      if (digitalRead(EndstopTachX_Pin) != LaststateX) {
-        LaststateX = !LaststateX;
-        if (direction == 1) {
-          GlobalPosX++;
+  digitalWrite(EndstopVcc_Pin, HIGH);
+
+  while (GoalPos != GlobalPosX) {
+    int direction = 0;
+    if (GoalPos > GlobalPosX) {
+      direction = 1;
+    } else {
+      direction = 0;
+    }
+    if (direction == 1) {
+      digitalWrite(EndstopH_Pin, LOW);
+      digitalWrite(EndstopL_Pin, HIGH);
+    } else {
+      digitalWrite(EndstopH_Pin, HIGH);
+      digitalWrite(EndstopL_Pin, LOW);
+    }
+    int velocity = 150;  //map(Xvel, 0, 100, Xvelmin, Xvelmax);
+    int slowvelocity = velocity;
+    bool LaststateX = digitalRead(EndstopTachX_Pin);
+    long distance = abs(GoalPos - GlobalPosX);
+    while (distance > 0) {
+      distance = abs(GoalPos - GlobalPosX);
+      if (digitalRead(SwitchFoot_Pin)) {
+        if (distance > 50) {
+          analogWrite(EndstopEnX_Pin, velocity);
         } else {
-          GlobalPosX--;
+          slowvelocity = map(distance, 0, 50, 45, velocity);
+          analogWrite(EndstopEnX_Pin, slowvelocity);
+        }
+        //Serial.println(GlobalPosX);
+        if (digitalRead(EndstopTachX_Pin) != LaststateX) {
+          LaststateX = !LaststateX;
+          if (direction == 1) {
+            GlobalPosX++;
+          } else {
+            GlobalPosX--;
+          }
+        }
+      } else {
+        digitalWrite(EndstopEnX_Pin, LOW);
+        SpindownX(direction);
+        if (StopAction()) {
+          digitalWrite(EndstopVcc_Pin, LOW);
+          return;
         }
       }
-    } else {
-      digitalWrite(EndstopEnX_Pin, LOW);
-      SpindownX(direction);
-      if (StopAction()) {
-        return;
-      }
     }
+    digitalWrite(EndstopH_Pin, LOW);
+    digitalWrite(EndstopL_Pin, LOW);
+    SpindownX(direction);
+    digitalWrite(EndstopEnX_Pin, LOW);
   }
-  digitalWrite(EndstopEnX_Pin, LOW);
-  SpindownX(direction);
+  digitalWrite(EndstopVcc_Pin, LOW);
 }
 
 long calcXsteps(float mm) {
@@ -345,6 +369,8 @@ long calcXsteps(float mm) {
 }
 
 void HomeY() {
+  digitalWrite(EndstopVcc_Pin, HIGH);
+  delay(300);
   digitalWrite(EndstopH_Pin, HIGH);
   digitalWrite(EndstopL_Pin, LOW);
   while (digitalRead(EndstopSwitchY_Pin)) {
@@ -363,9 +389,10 @@ void HomeY() {
   SpindownY(0);
   Y_homed = true;
   drawMode3Page();
-  GoPosY(31);
+  GoPosY(42);
   drawMode3Page();
   delay(2000);
+  digitalWrite(EndstopVcc_Pin, LOW);
 }
 
 
@@ -406,6 +433,15 @@ void bend() {
 }
 
 void Cut() {
+  CutLength = constrain(CutLength, MinCutLength, 545);
+  if (CutLength < 120) {
+    GoPosX(CutLength + XoffsetCutting);
+    GoPosY(YoffsetCutting);
+  } else {
+    GoPosX(CutLength + XoffsetCutting - 55);
+    GoPosY(YoffsetCutting + 5);
+  }
+  delay(2000);
   downholderDown();
   GoPosZ(CutHightDown, 1);
   delay(1000);
@@ -504,6 +540,8 @@ void JogZ(int direction) {
 }
 
 void JogX(int direction) {
+  digitalWrite(EndstopVcc_Pin, HIGH);
+  delay(300);
   if (direction == 1) {
     digitalWrite(EndstopH_Pin, LOW);
     digitalWrite(EndstopL_Pin, HIGH);
@@ -526,12 +564,18 @@ void JogX(int direction) {
       }
     }
   }
-  digitalWrite(EndstopEnX_Pin, LOW);
+  digitalWrite(EndstopH_Pin, LOW);
+  digitalWrite(EndstopL_Pin, LOW);
   SpindownX(direction);
+  digitalWrite(EndstopEnX_Pin, LOW);
   drawMode3Page();
+  digitalWrite(EndstopVcc_Pin, LOW);
+  ;
 }
 
 void JogY(int direction) {
+  digitalWrite(EndstopVcc_Pin, HIGH);
+  delay(300);
   if (direction == 1) {
     digitalWrite(EndstopH_Pin, LOW);
     digitalWrite(EndstopL_Pin, HIGH);
@@ -552,8 +596,12 @@ void JogY(int direction) {
       }
     }
   }
+  digitalWrite(EndstopH_Pin, LOW);
+  digitalWrite(EndstopL_Pin, LOW);
+  SpindownY(direction);
   digitalWrite(EndstopEnY_Pin, LOW);
   drawMode3Page();
+  digitalWrite(EndstopVcc_Pin, LOW);
 }
 
 void GoPosZ(float GoalPos, bool homingMode) {
@@ -622,48 +670,65 @@ void GoPosZ(float GoalPos, bool homingMode) {
 }
 
 void GoPosY(float positionMM) {
+  delay(300);
   positionMM = constrain(positionMM, 0, MaxY);
   long GoalPos = calcXsteps(positionMM);
   if (GoalPos == GlobalPosY) {
     return;
   }
-  int direction = 0;
-  if (GoalPos > GlobalPosY) {
-    direction = 1;
-  } else {
-    direction = 0;
-  }
-  if (direction == 1) {
-    digitalWrite(EndstopH_Pin, LOW);
-    digitalWrite(EndstopL_Pin, HIGH);
-  } else {
-    digitalWrite(EndstopH_Pin, HIGH);
-    digitalWrite(EndstopL_Pin, LOW);
-  }
-  int velocity = map(Yvel, 0, 100, Yvelmin, Yvelmax);
-  bool LaststateY = digitalRead(EndstopTachY_Pin);
-  while (abs(GoalPos - GlobalPosY)) {
-    if (digitalRead(SwitchFoot_Pin)) {
-      analogWrite(EndstopEnY_Pin, velocity);
-      //Serial.println(GlobalPosX);
-      if (digitalRead(EndstopTachY_Pin) != LaststateY) {
-        LaststateY = !LaststateY;
-        if (direction == 1) {
-          GlobalPosY++;
+  digitalWrite(EndstopVcc_Pin, HIGH);
+
+  while (GoalPos != GlobalPosY) {
+    int direction = 0;
+    if (GoalPos > GlobalPosY) {
+      direction = 1;
+    } else {
+      direction = 0;
+    }
+    if (direction == 1) {
+      digitalWrite(EndstopH_Pin, LOW);
+      digitalWrite(EndstopL_Pin, HIGH);
+    } else {
+      digitalWrite(EndstopH_Pin, HIGH);
+      digitalWrite(EndstopL_Pin, LOW);
+    }
+    int velocity = 255;  //map(Xvel, 0, 100, Xvelmin, Xvelmax);
+    int slowvelocity = velocity;
+    bool LaststateY = digitalRead(EndstopTachY_Pin);
+    long distance = abs(GoalPos - GlobalPosY);
+    while (distance > 0) {
+      distance = abs(GoalPos - GlobalPosY);
+      if (digitalRead(SwitchFoot_Pin)) {
+        if (distance > 50) {
+          analogWrite(EndstopEnY_Pin, velocity);
         } else {
-          GlobalPosY--;
+          slowvelocity = map(distance, 0, 50, 170, velocity);
+          analogWrite(EndstopEnY_Pin, slowvelocity);
+        }
+        //Serial.println(GlobalPosX);
+        if (digitalRead(EndstopTachY_Pin) != LaststateY) {
+          LaststateY = !LaststateY;
+          if (direction == 1) {
+            GlobalPosY++;
+          } else {
+            GlobalPosY--;
+          }
+        }
+      } else {
+        digitalWrite(EndstopEnY_Pin, LOW);
+        SpindownX(direction);
+        if (StopAction()) {
+          digitalWrite(EndstopVcc_Pin, LOW);
+          return;
         }
       }
-    } else {
-      digitalWrite(EndstopEnY_Pin, LOW);
-      SpindownY(direction);
-      if (StopAction()) {
-        return;
-      }
     }
+    digitalWrite(EndstopH_Pin, LOW);
+    digitalWrite(EndstopL_Pin, LOW);
+    SpindownX(direction);
+    digitalWrite(EndstopEnY_Pin, LOW);
   }
-  digitalWrite(EndstopEnY_Pin, LOW);
-  SpindownY(direction);
+  digitalWrite(EndstopVcc_Pin, LOW);
 }
 
 
