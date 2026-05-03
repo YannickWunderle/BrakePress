@@ -36,9 +36,9 @@ uint8_t homingItemCount = sizeof(homingItems) / sizeof(HomingItem);
 Field mode1Fields[] = {
   { 3, 0, 4, 0, 6, 2, 0.0, 170.0, &BendAngle },           // Ang:
   { 15, 0, 16, 0, 4, 1, -90.0, 90.0, &CorrectionAngle },  // Cor:
-  { 1, 1, 2, 1, 5, 1, 0.0, 700.0, &BendLength },          // L:
+  { 1, 1, 2, 1, 5, 1, 10.0, 545.0, &BendLength },         // L:
   { 9, 1, 10, 1, 4, 2, 0.0, 10.0, &MaterialThickness },   // d:
-  { 18, 1, 19, 1, 1, 0, 0.0, 1.0, &Retract },             // Ret:
+  { 18, 1, 19, 1, 1, 0, 0.0, 9, &Retract },               // Ret:
   { 1, 2, 2, 2, 4, 1, 0.0, 120.0, &MatrixWidth },         // W:
   { 9, 2, 10, 2, 4, 1, 0.0, 120.0, &MatrixHeight },       // H:
   { 16, 2, 17, 2, 3, 1, 0.0, 30.0, &MatrixRadius },       // R:
@@ -51,9 +51,10 @@ const uint8_t mode1Count = sizeof(mode1Fields) / sizeof(Field);
 Field mode2Fields[] = {
   // "Cut length: " at (0,0) -> colon at col 10, value at col 12
   { 10, 0, 12, 0, 5, 1, MinCutLength, 545.0, &CutLength },
-  { 4, 1, 6, 1, 3, 0, 0.0, 100, &Zvel },
-  { 4, 2, 6, 2, 5, 1, 0.0, 100, &Xvel },
-  { 4, 3, 6, 3, 5, 1, 0.0, 100, &Yvel }
+  { 4, 1, 5, 1, 3, 0, 0.0, 100, &Zvel },
+  { 18, 1, 19, 1, 1, 0, 0.0, 1, &UseEndstop },
+  { 4, 2, 5, 2, 3, 0, 0.0, 100, &Xvel },
+  { 4, 3, 5, 3, 3, 0, 0.0, 100, &Yvel }
 };
 const uint8_t mode2Count = sizeof(mode2Fields) / sizeof(Field);
 
@@ -231,13 +232,17 @@ void drawMode2Page() {
   lcd.print("Zvel: ");
   printFloatField(mode2Fields[1]);
 
+  lcd.setCursor(11, 1);
+  lcd.print("Endstop: ");
+  printFloatField(mode2Fields[2]);
+
   lcd.setCursor(0, 2);
   lcd.print("Xvel: ");
-  printFloatField(mode2Fields[2]);
+  printFloatField(mode2Fields[3]);
 
   lcd.setCursor(0, 3);
   lcd.print("Yvel: ");
-  printFloatField(mode2Fields[3]);
+  printFloatField(mode2Fields[4]);
 }
 
 bool StopAction() {

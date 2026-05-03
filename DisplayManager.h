@@ -45,7 +45,7 @@ extern float MatrixHeight;
 extern float MatrixRadius;
 extern float StampHeight;
 extern float FreeSpace;
-
+extern float UseEndstop;
 extern float CutLength;
 
 extern float Z_Goalpos;

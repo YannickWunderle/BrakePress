@@ -52,7 +52,7 @@ Mod Z2 and X axis
 
 #define PrechargeTime 2000
 #define MaxHight 145
-#define UpperToolHeight 165.7
+#define UpperToolHeight 167.72  //165.7
 
 #define CutHightUp 60
 #define CutHightDown 2
@@ -66,7 +66,7 @@ Mod Z2 and X axis
 #define Yvelmax 255
 
 #define XoffsetBending 17
-#define YoffsetBending 33
+#define YoffsetBending 35
 #define XoffsetCutting 17
 #define YoffsetCutting 3
 #define MaxX 545
@@ -89,11 +89,11 @@ float BendLength = 100;
 float MaterialThickness = 1.25;
 float Retract = 0;
 float MatrixWidth = 12;
-float MatrixHeight = 75;
+float MatrixHeight = 76;
 float MatrixRadius = 0.1;
 float StampHeight = 110;
 float FreeSpace = 20;
-
+float UseEndstop = true;
 float CutLength = 120;
 
 float Z_Goalpos = 60;
@@ -324,17 +324,17 @@ void GoPosX(float positionMM) {
       digitalWrite(EndstopH_Pin, HIGH);
       digitalWrite(EndstopL_Pin, LOW);
     }
-    int velocity = 150;  //map(Xvel, 0, 100, Xvelmin, Xvelmax);
+    int velocity = 200;  //map(Xvel, 0, 100, Xvelmin, Xvelmax);
     int slowvelocity = velocity;
     bool LaststateX = digitalRead(EndstopTachX_Pin);
     long distance = abs(GoalPos - GlobalPosX);
     while (distance > 0) {
       distance = abs(GoalPos - GlobalPosX);
       if (digitalRead(SwitchFoot_Pin)) {
-        if (distance > 50) {
+        if (distance > 55) {
           analogWrite(EndstopEnX_Pin, velocity);
         } else {
-          slowvelocity = map(distance, 0, 50, 45, velocity);
+          slowvelocity = map(distance, 0, 55, 60, velocity);
           analogWrite(EndstopEnX_Pin, slowvelocity);
         }
         //Serial.println(GlobalPosX);
@@ -411,19 +411,28 @@ float BendPosition() {
 
 
 void bend() {
-  if (BendLength < 120) {
-    GoPosY(MatrixHeight - YoffsetBending + 5);
-    GoPosX(BendLength + XoffsetBending);
-    GoPosY(MatrixHeight - YoffsetBending);
-  } else {
-    GoPosX(BendLength + XoffsetBending - 60);
-    GoPosY(MatrixHeight - YoffsetBending - 5);
-  }
-
   float MaterialTouch = (float)UpperToolHeight - float(MatrixHeight) - float(MaterialThickness);
-
-  GoPosZ(MaterialTouch, 1);
-  delay(1000);
+  if (UseEndstop) {
+    if (calcXsteps(BendLength + XoffsetBending) != GlobalPosX) {
+      if (BendLength < 120) {
+        GoPosY(MatrixHeight - YoffsetBending + 5);
+        GoPosX(BendLength + XoffsetBending);
+        GoPosY(MatrixHeight - YoffsetBending);
+      } else {
+        GoPosX(BendLength + XoffsetBending - 60);
+        GoPosY(MatrixHeight - YoffsetBending - 5);
+      }
+    }
+    if (Retract) {
+      GoPosZ(MaterialTouch, 1);
+      if (BendLength < 120) {
+        GoPosY(MatrixHeight - YoffsetBending + 5);
+        GoPosX(BendLength + XoffsetBending + Retract * 10);
+      } else {
+        GoPosX(BendLength + XoffsetBending + Retract * 10);
+      }
+    }
+  }
   float BendDepth = BendPosition();
   GoPosZ(BendDepth, 1);
   delay(500);
@@ -434,14 +443,16 @@ void bend() {
 
 void Cut() {
   CutLength = constrain(CutLength, MinCutLength, 545);
-  if (CutLength < 120) {
-    GoPosX(CutLength + XoffsetCutting);
-    GoPosY(YoffsetCutting);
-  } else {
-    GoPosX(CutLength + XoffsetCutting - 55);
-    GoPosY(YoffsetCutting + 5);
+  if (UseEndstop) {
+    if (CutLength < 120) {
+      GoPosX(CutLength + XoffsetCutting);
+      GoPosY(YoffsetCutting);
+    } else {
+      GoPosX(CutLength + XoffsetCutting - 55);
+      GoPosY(YoffsetCutting + 5);
+    }
+    delay(2000);
   }
-  delay(2000);
   downholderDown();
   GoPosZ(CutHightDown, 1);
   delay(1000);
