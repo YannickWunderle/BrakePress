@@ -1,8 +1,8 @@
 link pid
 link pmsm
 link misc
-conf0.r = 2.28
-conf0.l = 0.00549
+conf0.r = 1.14
+conf0.l = 0.002745
 conf0.j = 0.000135
 conf0.phase_cur = 1
 conf0.max_ac_cur = 4
@@ -52,5 +52,5 @@ conf0.pos_p = 2
 conf0.vel_p = 500
 conf0.vel_i = 15
 
-
-
+iit0.max_time = 1000
+iit0.cur_boost = 0
