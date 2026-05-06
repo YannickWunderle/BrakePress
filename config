@@ -5,7 +5,7 @@ conf0.r = 1.14
 conf0.l = 0.002745
 conf0.j = 0.000135
 conf0.phase_cur = 1
-conf0.max_ac_cur = 4
+conf0.max_ac_cur = 8
 conf0.psi = 0.11
 conf0.max_force = 80
 conf0.polecount = 4
@@ -46,7 +46,7 @@ fault0.en = th0.out
 
 conf0.max_vel = 1600.000000
 
-conf0.max_sat = 10
+conf0.max_sat = 80
 conf0.max_pos_error = 50
 conf0.pos_p = 2
 conf0.vel_p = 500
@@ -54,3 +54,6 @@ conf0.vel_i = 15
 
 iit0.max_time = 1000
 iit0.cur_boost = 0
+
+
+

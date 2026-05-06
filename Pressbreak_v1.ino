@@ -72,7 +72,7 @@ Mod Z2 and X axis
 #define MaxX 545
 #define MaxY 70
 #define MaxStepTime 1200
-#define MinStepTime 150
+#define MinStepTime 500
 
 bool debug = true;
 
@@ -109,7 +109,7 @@ uint8_t lastMode = 0;
 uint8_t HomingMode = 0;
 uint8_t GlobalMode = 0;
 
-float Zvel = 60;
+float Zvel = 100;
 float Xvel = 50;
 float Yvel = 50;
 
@@ -229,7 +229,7 @@ void HomeZ() {
       delayMicroseconds(50);  // short pulse width only
       digitalWrite(StepL_Pin, HIGH);
       digitalWrite(StepH_Pin, LOW);
-      delayMicroseconds(350);  // short pulse width only
+      delayMicroseconds(MinStepTime);  // short pulse width only
     } else {
       if (StopAction()) {
         return;
@@ -535,17 +535,23 @@ void JogZ(int direction) {
     digitalWrite(DirL_Pin, HIGH);
   }
   int stepTime = map(Zvel, 0, 100, MaxStepTime, MinStepTime);
+  unsigned long now = 0;
+  unsigned long lastStepTime = micros();
+
 
   while (digitalRead(SwitchFoot_Pin) && precharged) {
     Precharge();
-    digitalWrite(StepL_Pin, LOW);
-    digitalWrite(StepH_Pin, HIGH);
-    delayMicroseconds(50);  // short pulse width only
-    digitalWrite(StepL_Pin, HIGH);
-    digitalWrite(StepH_Pin, LOW);
-    delayMicroseconds(stepTime);  // short pulse width only
-    if (direction == 1) GlobalPos++;
-    else GlobalPos--;
+    now = micros();
+    if (now - lastStepTime >= stepTime) {
+      lastStepTime = now;
+      digitalWrite(StepL_Pin, LOW);
+      digitalWrite(StepH_Pin, HIGH);
+      delayMicroseconds(20);  // short pulse width only
+      digitalWrite(StepL_Pin, HIGH);
+      digitalWrite(StepH_Pin, LOW);
+      if (direction == 1) GlobalPos++;
+      else GlobalPos--;
+    }
   }
   drawMode3Page();
 }
@@ -635,8 +641,8 @@ void GoPosZ(float GoalPos, bool homingMode) {
   unsigned long now = 0;
   unsigned long lastStepTime = micros();
 
-  uint16_t stepTime = 600;
-  const uint16_t minStepTime = 550;
+  uint16_t stepTime = map(Zvel, 0, 100, MaxStepTime, MinStepTime);
+  //const uint16_t minStepTime = 550;
   uint8_t rampCount = 0;
 
   while ((abs(GoalPosSteps - GlobalPos) > 0) && (digitalRead(SwitchZ_Pin) || homingMode)) {
@@ -646,7 +652,6 @@ void GoPosZ(float GoalPos, bool homingMode) {
       if (!lastPedal) {
         delay(5);
         lastPedal = true;
-        stepTime = map(Zvel, 0, 100, MaxStepTime, MinStepTime);
         rampCount = 0;
       }
 
@@ -662,11 +667,11 @@ void GoPosZ(float GoalPos, bool homingMode) {
         if (direction) GlobalPos++;
         else GlobalPos--;
 
-        rampCount++;
+        /*rampCount++;
         if (rampCount == 2) {
           rampCount = 0;
-          if (stepTime > minStepTime) stepTime--;  // reduce step period
-        }
+          if (stepTime > MinStepTime) stepTime--;  // reduce step period
+        }*/
       }
 
     } else {
